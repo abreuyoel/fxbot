@@ -1,0 +1,27 @@
+[project]
+name = "fxbot"
+version = "0.1.0"
+description = "Bot de trading forex — Fase 1: datos, indicadores, backtesting y Monte Carlo"
+requires-python = ">=3.11"
+dependencies = [
+    "numpy>=1.26",
+    "pandas>=2.1",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8"]
+# Datos de ejemplo (EURUSD H1, ~10 meses de 2017-2018) incluidos en el paquete backtesting.py.
+# Solo sirven para probar que todo corre; no para validar una estrategia.
+muestra = ["backtesting>=0.6"]
+# Solo en Windows, con el terminal MetaTrader 5 instalado: scripts/descargar_datos_mt5.py
+mt5 = ["MetaTrader5>=5.0.45"]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["fxbot*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
