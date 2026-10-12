@@ -77,10 +77,22 @@ def test_el_tamano_incluye_costos_y_respeta_el_riesgo():
     assert t.risk_usd <= 100.0 + 1e-6
 
 
-def test_capital_chico_descarta_la_senal_en_vez_de_arriesgar_de_mas():
+def test_capital_chico_descarta_la_senal_si_el_lote_minimo_pasa_el_tope():
     df = bars([(1.1, 1.1, 1.1, 1.1), (1.1, 1.1, 1.1, 1.1)])
-    r = run_backtest(df, signal_at(df, 0, 1, 0.0060, 0.0090), cfg(capital=500.0))  # stop de 60 pips
+    # stop de 200 pips: 0.01 lotes arriesgan $20 = 4 % de $500 (> tope 1.5 %)
+    r = run_backtest(df, signal_at(df, 0, 1, 0.0200, 0.0300), cfg(capital=500.0))
     assert r.trades.empty and r.skipped_small == 1
+
+
+def test_capital_chico_usa_el_lote_minimo_si_cabe_en_el_tope():
+    df = bars([(1.1, 1.1, 1.1, 1.1), (1.1000, 1.1002, 1.0930, 1.0940)])
+    # stop de 60 pips: 0.01 lotes arriesgan $6 = 1.2 % de $500 (> 1 % pero ≤ tope 1.5 %)
+    r = run_backtest(df, signal_at(df, 0, 1, 0.0060, 0.0090), cfg(capital=500.0))
+    t = r.trades.iloc[0]
+    assert t.lots == pytest.approx(0.01) and t.risk_pct == pytest.approx(1.2)
+    assert t.pnl_usd == pytest.approx(-6.0)
+    sin_tope = run_backtest(df, signal_at(df, 0, 1, 0.0060, 0.0090), cfg(capital=500.0, min_lot_max_risk_pct=0.0))
+    assert sin_tope.trades.empty and sin_tope.skipped_small == 1
 
 
 def test_tension_reduce_el_riesgo_25_por_ciento():

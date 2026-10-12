@@ -65,6 +65,11 @@ def run_backtest(df: pd.DataFrame, signals: pd.DataFrame, cfg: BacktestConfig) -
     smult = signals["size_mult"].to_numpy(float)
     ctx_cols = [k for k in signals.columns if k not in CONTEXT_SKIP]
 
+    # claves de día y semana precalculadas: crear un Timestamp por vela era lo más lento del bucle
+    day_keys = idx.floor("D").asi8
+    iso = idx.isocalendar()
+    week_keys = (iso["year"].to_numpy() * 100 + iso["week"].to_numpy()).astype(np.int64)
+
     start_i = 0 if cfg.entry_start is None else int(idx.searchsorted(cfg.entry_start))
     end_i = len(df) if cfg.entry_end is None else int(idx.searchsorted(cfg.entry_end))
 
@@ -94,7 +99,8 @@ def run_backtest(df: pd.DataFrame, signals: pd.DataFrame, cfg: BacktestConfig) -
             "entry_time": p["entry_time"], "exit_time": idx[i], "side": "compra" if p["side"] > 0 else "venta",
             "lots": p["lots"], "entry": p["entry"], "exit": price, "sl": p["sl"], "tp": p["tp"],
             "gross_usd": gross, "commission_usd": commission, "swap_usd": swap, "pnl_usd": net,
-            "risk_usd": p["risk_usd"], "r_multiple": net / p["risk_usd"] if p["risk_usd"] > 0 else 0.0,
+            "risk_usd": p["risk_usd"], "risk_pct": p["risk_pct"],
+            "r_multiple": net / p["risk_usd"] if p["risk_usd"] > 0 else 0.0,
             "exit_reason": reason, "bars": i - p["entry_i"] + 1, "equity_after": cash, **p["ctx"],
         })
         pos = None
@@ -122,8 +128,7 @@ def run_backtest(df: pd.DataFrame, signals: pd.DataFrame, cfg: BacktestConfig) -
                 close_pos(i, p["tp"], "objetivo")
 
     for i in range(len(df)):
-        t = idx[i]
-        dk, wk = t.date(), (t.isocalendar().year, t.isocalendar().week)
+        dk, wk = day_keys[i], week_keys[i]
         if dk != day_key:
             day_key, day_start_eq = dk, cash
         if wk != week_key:
@@ -140,7 +145,8 @@ def run_backtest(df: pd.DataFrame, signals: pd.DataFrame, cfg: BacktestConfig) -
                 entry = o[i] + spr[i] + slip if side > 0 else o[i] - slip
                 pip_val = inst.pip_value_per_lot(entry)
                 extra = c.commission_per_lot_rt + (spr[i] / inst.pip_size + 2 * c.slippage_pips) * pip_val
-                lots = position_size(cash, lim.risk_pct * smult[i - 1], sl_d[i - 1], entry, inst, extra)
+                lots = position_size(cash, lim.risk_pct * smult[i - 1], sl_d[i - 1], entry, inst, extra,
+                                     lim.min_lot_max_risk_pct * smult[i - 1])
                 if lots == 0:
                     skipped_small += 1
                 else:
@@ -148,7 +154,7 @@ def run_backtest(df: pd.DataFrame, signals: pd.DataFrame, cfg: BacktestConfig) -
                     tp = entry + side * tp_d[i - 1]
                     risk_usd = lots * (sl_d[i - 1] / inst.pip_size * pip_val + extra)
                     pos = {"side": side, "entry": entry, "sl": sl, "tp": tp, "lots": lots, "entry_i": i,
-                           "entry_time": t, "risk_usd": risk_usd,
+                           "entry_time": idx[i], "risk_usd": risk_usd, "risk_pct": risk_usd / cash * 100,
                            "ctx": {k: signals[k].iat[i - 1] for k in ctx_cols}}
 
         # 2) salida dentro de la vela (incluida la vela de entrada)
@@ -165,7 +171,7 @@ def run_backtest(df: pd.DataFrame, signals: pd.DataFrame, cfg: BacktestConfig) -
             if pos is not None:
                 close_pos(i, cl[i] if pos["side"] > 0 else cl[i] + spr[i], "apagado por drawdown")
             mtm = cash
-            halted_at = t
+            halted_at = idx[i]
         eq[i] = mtm
 
         # 4) fin de la ventana: se cierra lo abierto

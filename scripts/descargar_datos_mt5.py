@@ -39,10 +39,21 @@ def server_to_utc(epoch_server: pd.Series, servidor: str) -> pd.DatetimeIndex:
     raise SystemExit(f"--servidor no reconocido: {servidor} (usa ny+7 o utc+N)")
 
 
+def find_symbol(mt5, base: str, sufijo: str | None) -> str | None:
+    """Nombre del símbolo en tu broker. FP Markets y otros a veces usan EURUSD.r, EURUSD-ECN, etc."""
+    if sufijo is not None:
+        return base + sufijo if mt5.symbol_info(base + sufijo) else None
+    if mt5.symbol_info(base):
+        return base
+    candidates = [x.name for x in (mt5.symbols_get(f"{base}*") or [])
+                  if x.name.upper().startswith(base) and len(x.name) <= len(base) + 6]
+    return min(candidates, key=len) if candidates else None
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--simbolos", nargs="+", default=["EURUSD", "GBPUSD", "USDJPY"])
-    ap.add_argument("--sufijo", default="", help="sufijo de los símbolos en tu broker (.r, -ECN, ...)")
+    ap.add_argument("--sufijo", default=None, help="sufijo de los símbolos (.r, -ECN...); por defecto se detecta solo")
     ap.add_argument("--tf", default="H1", choices=sorted(TIMEFRAMES))
     ap.add_argument("--desde", default="2012-01-01")
     ap.add_argument("--hasta", default=None, help="por defecto: ahora")
@@ -54,6 +65,10 @@ def main() -> None:
 
     if not mt5.initialize():
         raise SystemExit(f"No pude conectar con MetaTrader 5: {mt5.last_error()}. ¿Está abierto y con sesión iniciada?")
+    acc = mt5.account_info()
+    if acc is not None:
+        kind = "DEMO" if acc.trade_mode == mt5.ACCOUNT_TRADE_MODE_DEMO else "REAL"
+        print(f"Conectado a {acc.server} (cuenta {kind}). Este script solo LEE precios: no abre operaciones.")
     out = Path(a.salida)
     out.mkdir(parents=True, exist_ok=True)
     start = datetime.fromisoformat(a.desde).replace(tzinfo=timezone.utc)
@@ -61,9 +76,11 @@ def main() -> None:
     tf = getattr(mt5, TIMEFRAMES[a.tf])
     try:
         for base in a.simbolos:
-            sym = base + a.sufijo
-            if not mt5.symbol_select(sym, True):
-                print(f"✗ {sym}: no existe en tu broker (¿falta --sufijo?)")
+            base = base.upper()
+            sym = find_symbol(mt5, base, a.sufijo)
+            if sym is None or not mt5.symbol_select(sym, True):
+                print(f"✗ {base}: no lo encuentro en tu broker. Mira el nombre exacto en 'Observación del mercado'"
+                      f" y pásalo con --sufijo")
                 continue
             info = mt5.symbol_info(sym)
             pip = info.point * (10 if info.digits in (3, 5) else 1)

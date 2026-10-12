@@ -26,12 +26,15 @@ puede validar con datos, no se opera.
   Sus indicadores ya están portados en fxbot/indicators y fxbot/regime, con prueba de
   paridad contra el código original (tests/test_paridad_caracas.py).
 
-# MERCADOS
-- Fase 1–3: solo forex. EURUSD, GBPUSD y USDJPY; XAUUSD solo si el laboratorio lo justifica.
-- Más adelante: un módulo separado para ETF/acciones, con su propio tipo de noticias
-  (resultados trimestrales, sector, Fed). El código ya modela cada instrumento con
-  fxbot/instruments.py para poder ampliarlo.
-- Futuros: no con menos de ~2000 USD (márgenes y tamaño mínimo de contrato).
+# MERCADOS (detalle en docs/MERCADOS.md)
+- Núcleo pasivo: ETF del S&P 500 en Binance (Stocks o bStocks SPYB), con compra mensual
+  fija. El bot NO lo especula; como mucho rebalancea en fases futuras.
+- Satélite activo: forex con el bot en FP Markets (cuentas en el servidor FPMarketsSC).
+  EURUSD, GBPUSD y USDJPY; XAUUSD solo si el laboratorio lo justifica.
+- Más adelante: módulo de acciones en velas diarias, con sus propias noticias
+  (resultados trimestrales, sector, Fed). fxbot/instruments.py ya permite ampliarlo.
+- Futuros: no con menos de ~5000 USD (un micro del S&P 500 mueve $250–500 en un día normal).
+- El dinero del ETF nunca se usa para "recuperar" pérdidas del bot.
 
 # ARQUITECTURA (Python, tipada, con tests; módulos independientes)
 1. data/        Velas OHLC + tick volume + spread real (MT5/cTrader), macro (DXY, VIX,
@@ -47,7 +50,8 @@ puede validar con datos, no se opera.
 5. risk/        Reglas duras, fuera del alcance de la IA y de la optimización:
                 - Riesgo por operación 1 % (0,75 % en "tensión"; nada nuevo en "pánico").
                 - Tamaño calculado desde el stop, incluyendo comisión, spread y deslizamiento.
-                  Si ni el lote mínimo cabe en el riesgo: NO se opera.
+                  Si ni el lote mínimo cabe en el 1 %, se usa el lote mínimo solo si arriesga
+                  ≤ 1,5 % (queda marcado); si arriesga más, NO se opera.
                 - Máximo 2 posiciones; nunca dos pares muy correlacionados en el mismo sentido.
                 - Stop diario −2 %, semanal −5 %, drawdown total −20 % → apagado y aviso.
                   Reactivación solo manual.
@@ -55,7 +59,9 @@ puede validar con datos, no se opera.
                 - No abrir si el spread supera 1,5× su promedio de esa hora.                [HECHO salvo correlación/spread]
 6. lab/         Backtest con costos reales (spread por vela, comisión, swap con miércoles
                 triple, deslizamiento, gaps), walk-forward, Monte Carlo (5000 historias),
-                what-if, desglose por banda de volatilidad y régimen, veredicto de fase.   [HECHO]
+                what-if, desglose por banda de volatilidad y régimen, veredicto de fase.
+                Selección de parámetros por "meseta" (el combo y sus vecinos deben
+                funcionar) y validación de varios pares juntos.                         [HECHO]
 7. intel/       Capa de IA + RAG (ver docs/PROMPT_IA_TIEMPO_REAL.md):
                 - Ingesta de noticias y calendario económico en una base vectorial,
                   incluyendo decisiones y discursos de la Fed, BCE, BoE y BoJ.

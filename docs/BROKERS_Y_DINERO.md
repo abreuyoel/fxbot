@@ -8,12 +8,12 @@ confírmalo en el formulario de registro del broker** (el desplegable de países
 
 | Broker | ¿Acepta Venezuela? | Plataformas útiles para el bot | Nota |
 |---|---|---|---|
-| **FP Markets** (ya tienes cuenta) | Probable: los comparadores dicen que sí y que acepta USDT; no lo lista entre los países prohibidos [1][2] | MT5 y **cTrader** | Primer candidato. Cuenta "Raw" de cTrader: spread bajo + comisión |
+| **FP Markets** (ya tienes cuentas) | **Sí.** Tienes una cuenta real y una demo en el servidor `FPMarketsSC` (la entidad de Seychelles, la que atiende a Latinoamérica) | MT5 y **cTrader** | El elegido. Para el bot: cTrader Raw o MT5 |
 | Exness | Probable, según sitios afiliados [3] | MT5 | Tiene cuenta **Standard Cent**: con $500 deja usar lotes muy chicos |
 | XM, IC Markets, Tickmill, RoboForex | Aparecen como aceptados en comparadores [4][5] | MT5, algunos cTrader | Alternativas si FP Markets falla |
 | Interactive Brokers | **No.** IBKR respondió en ene y feb de 2026 que no da servicio a residentes de Venezuela [6] | — | Descartado por ahora |
 | Quantfury | Sí, pero es solo una app móvil y no encontré API pública | — | **No sirve para un bot** |
-| Binance | Sí (lo usas para P2P) | No tiene forex | Sirve como **puente para fondear** con USDT. Lanzó acciones de EE. UU. en junio de 2026; las acciones tokenizadas (bStocks) se anunciaron pero no confirmé si aplican a Venezuela [7] |
+| Binance | Sí (lo usas para P2P) | No tiene forex | Sirve como **puente para fondear** con USDT y para el **ETF del S&P 500** (Stocks o bStocks como SPYB, que te aparecen disponibles). Ver [MERCADOS.md](MERCADOS.md) [7] |
 
 **Recomendación:** FP Markets con una cuenta **cTrader Raw**. Hay dos razones:
 - La [cTrader Open API](https://spotware.com/ctrader/dev-resources/open-api) es gratuita y
@@ -52,24 +52,28 @@ El producto de inversión de Towerbank pide desde $10.000, así que no aplica po
 Son cosas distintas y se pueden combinar:
 
 - **Un ETF del S&P 500 o del mundo** ha dado cerca de 10 % anual en el largo plazo, sin trabajo y
-  sin bot. Pero hay años de −20 % o peor. Antes de comprarlo, tienes que confirmar por dónde lo
-  puedes comprar legalmente desde Venezuela. IBKR no sirve y lo de Binance está por confirmar.
+  sin bot. Pero hay años de −20 % o peor. La vía es Binance (Stocks o bStocks). Antes de comprar,
+  revisa los 5 puntos de [MERCADOS.md](MERCADOS.md).
 - **El bot de forex** busca 1–3 % al mes, con más riesgo y más trabajo. Hasta que pase la Fase 2
   (demo), no necesita dinero real.
 
-Plan sugerido:
-1. Mientras el bot está en Fase 1 y Fase 2 (3–4 meses), tus $500 pueden estar en algo pasivo,
-   si encuentras una vía confiable, o simplemente en USD/USDT.
-2. Si el bot aprueba la demo, mueves $500 (o mejor $1000, ver abajo) al broker.
+Plan sugerido (detalle en [MERCADOS.md](MERCADOS.md)):
+1. Mientras el bot está en Fase 1 y Fase 2 (3–4 meses, en demo), tus $500 van al ETF en Binance
+   con compras graduales.
+2. Si el bot aprueba la demo, fondeas FP Markets con $500 nuevos (no los del ETF).
 
 ### Ojo con el capital chico
 
 Con $500 y 1 % de riesgo arriesgas $5 por operación. Con un lote mínimo de 0,01, un pip de
 EURUSD vale $0,10. Un stop de 50 pips (lo normal en H4) cuesta $5 más comisión, o sea, ya pasas
-el 1 %. En la prueba con datos de muestra, el bot **descartó 14 de 19 señales** por eso.
+el 1 %. En la primera prueba con datos de muestra, el bot **descartó 14 de 19 señales** por eso.
 
-Hay cuatro salidas posibles:
-- Operar en H1 (stops más cortos, de 20–30 pips).
+**Ya está resuelto en el bot:** si el lote mínimo arriesga como mucho 1,5 % (`--riesgo-tope`),
+el bot lo usa y lo marca en el reporte; si arriesga más, descarta la señal. Además, la temporalidad
+por defecto pasó a H1. Con los mismos datos, en H4 se descartan 3 señales (antes 14) y en H1
+ninguna. El Monte Carlo usa el riesgo efectivo promedio, no el 1 % nominal.
+
+Otras salidas, si hicieran falta:
 - Empezar en real con $1000.
 - Usar una cuenta cent (Exness Standard Cent u otra), que permite lotes más chicos.
 - Arriesgar 2 %. **No recomendado.**

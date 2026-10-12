@@ -43,14 +43,20 @@ pytest tests/test_paridad_caracas.py
 
 ## Hallazgos al revisar tu código
 
+Las correcciones de nombres (1, 2 y 3) están en la rama `claude/kind-hawking-6l9i9m` de
+Caracas-Portafolio, lista para revisar y fusionar. Los cálculos no cambiaron, salvo el DMI
+del panel de IA, que ahora coincide con la tarjeta.
+
 1. **El "HMM" no es un HMM.** `calcMarketRegime` dice "Gaussian HMM (4 states)", pero es una
    regla ponderada: la tendencia de 5, 20 y 60 velas con pesos 0,25/0,50/0,25, más un filtro de
    volatilidad. Funciona como heurística. Un HMM entrenado de verdad (`hmmlearn`) se puede probar
    en el laboratorio contra esta versión. Si gana fuera de muestra, se cambia.
-2. **El "DMI" no es el DMI de Wilder.** `dmi()` es un RSI cuyo período se adapta a la volatilidad
-   de las últimas 5 velas. Por eso marcaba 75,1 en BNC mientras el ADX estaba en 24,5. El DMI
-   clásico (+DI/−DI) está en `adx()`. Sugerencia para la web: renombrar la tarjeta a "RSI
-   adaptativo".
+2. **El "DMI" es el DMI de Chande, no el de Wilder (corregido en la web).** `dmi()` es el
+   *Dynamic Momentum Index* de Tushar Chande: un RSI cuyo período se acorta cuando sube la
+   volatilidad. Es un indicador real, pero junto al ADX casi todo el mundo lee "DMI" como el
+   direccional de Wilder (+DI/−DI). Por eso un 75,1 al lado de un ADX de 24,5 confundía. En el
+   bot se llama `dyn_rsi` y el +DI/−DI está en `adx()`. Además, el panel de IA lo calculaba con
+   la semilla vieja y daba 99 con precios planos, así que la IA veía otro número que el usuario.
 3. **El Kelly se calcula sobre los retornos diarios de la acción, no sobre operaciones.** Para un
    bot, el Kelly correcto sale de los resultados de la estrategia en múltiplos de R
    (`risk.sizing.kelly_from_trades`). El de la web es una medida de "sesgo alcista" de la acción,

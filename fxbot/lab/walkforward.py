@@ -41,6 +41,32 @@ def _score(trades: pd.DataFrame, min_trades: int) -> float:
     return float(r.mean() * np.sqrt(len(r)))  # premia ventaja consistente, no 3 operaciones con suerte
 
 
+def robust_scores(scores: list[float], combos: list[dict], grid: dict) -> list[float]:
+    """Puntaje "de meseta": la mediana del combo y sus vecinos (un paso en un solo parámetro).
+
+    Un parámetro sobreajustado es un pico aislado: gana él y pierden sus vecinos. Uno robusto
+    está en una meseta: los valores cercanos también funcionan. Elegir por la mediana del
+    vecindario castiga los picos aislados.
+    """
+    keys = list(grid)
+    pos = [tuple(grid[k].index(c[k]) for k in keys) for c in combos]
+    where = {p: i for i, p in enumerate(pos)}
+    out = []
+    for i, p in enumerate(pos):
+        if not np.isfinite(scores[i]):
+            out.append(-np.inf)
+            continue
+        hood = [scores[i]]
+        for d in range(len(keys)):
+            for step in (-1, 1):
+                q = p[:d] + (p[d] + step,) + p[d + 1:]
+                if q in where:
+                    v = scores[where[q]]
+                    hood.append(v if np.isfinite(v) else 0.0)  # vecino sin operaciones suficientes = 0
+        out.append(float(np.median(hood)))
+    return out
+
+
 def walk_forward(df: pd.DataFrame, cfg: BacktestConfig, grid: dict | None = None,
                  train: pd.DateOffset = pd.DateOffset(years=2), test: pd.DateOffset = pd.DateOffset(months=6),
                  min_trades: int = 20) -> WalkForwardResult:
@@ -62,7 +88,8 @@ def walk_forward(df: pd.DataFrame, cfg: BacktestConfig, grid: dict | None = None
         te_end = tr_end + test
         if te_end > df.index[-1] + pd.Timedelta(days=1):
             break
-        scores = [_score(run(i, start, tr_end).trades, min_trades) for i in range(len(combos))]
+        raw = [_score(run(i, start, tr_end).trades, min_trades) for i in range(len(combos))]
+        scores = robust_scores(raw, combos, grid)
         best = int(np.argmax(scores))
         if not np.isfinite(scores[best]):
             rows.append({"train_start": start, "test_start": tr_end, "test_end": te_end, "params": None,
@@ -73,7 +100,8 @@ def walk_forward(df: pd.DataFrame, cfg: BacktestConfig, grid: dict | None = None
             if len(t):
                 oos.append(t.assign(window=tr_end))
             rows.append({"train_start": start, "test_start": tr_end, "test_end": te_end, "params": combos[best],
-                         "train_score": round(scores[best], 3), "oos_trades": len(t),
+                         "train_score": round(scores[best], 3), "train_score_pico": round(raw[best], 3),
+                         "oos_trades": len(t),
                          "oos_expectancy_r": round(float(t["r_multiple"].mean()), 3) if len(t) else None,
                          "oos_pnl_usd": round(float(t["pnl_usd"].sum()), 2) if len(t) else 0.0})
         start = start + test
