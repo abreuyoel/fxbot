@@ -28,8 +28,8 @@ Si algo falla, el script se detiene y muestra el error: cópialo y mándalo.
 
 | Documento | Para qué es | Qué haces tú con él |
 |---|---|---|
-| [`docs/MERCADOS.md`](docs/MERCADOS.md) | Forex vs. ETF vs. acciones vs. futuros, y el plan de dinero por etapas | **Léelo primero.** Decide si los $500 van al ETF en Binance mientras el bot está en demo |
-| [`docs/BROKERS_Y_DINERO.md`](docs/BROKERS_Y_DINERO.md) | Broker, fondeo, VPS y costos | Hazle a FP Markets las 5 preguntas de la sección 1 antes de depositar en real |
+| [`docs/MERCADOS.md`](docs/MERCADOS.md) | ETF (SPY, VOO, VGT, SMH) vs. forex vs. futuros, qué es un bStock y el plan de dinero por etapas | **Léelo primero.** Busca VGTB, SMHB y VOOB en Binance, elige el reparto y usa la calculadora mensual |
+| [`docs/BROKERS_Y_DINERO.md`](docs/BROKERS_Y_DINERO.md) | Broker, fondeo, cTrader, apalancamiento, VPS y costos | Pega en el chat de FP Markets el mensaje de la sección 1 y guarda las respuestas |
 | [`docs/PROMPT_MAESTRO.md`](docs/PROMPT_MAESTRO.md) | El encargo completo del sistema: fases, reglas de riesgo y criterios para avanzar | Nada por ahora. Cuando quieras avanzar una fase, pégaselo a Claude Code junto con "haz la Fase 2" |
 | [`docs/PROMPT_IA_TIEMPO_REAL.md`](docs/PROMPT_IA_TIEMPO_REAL.md) | Los prompts que usará la IA del bot: filtro de señales, resúmenes de Londres y NY, revisión semanal | Nada por ahora. Se programan en la Fase 2. Puedes leerlos para ajustar el tono o los horarios |
 | [`docs/INDICADORES.md`](docs/INDICADORES.md) | Cómo cada indicador de tu web pasó al bot, y lo que encontré en tu código | Revisa y fusiona la rama `claude/kind-hawking-6l9i9m` de Caracas-Portafolio (correcciones de nombres) |
@@ -48,7 +48,7 @@ Si algo falla, el script se detiene y muestra el error: cópialo y mándalo.
 ```bash
 python -m venv .venv && source .venv/bin/activate     # Windows: .venv\Scripts\activate
 pip install -e ".[dev,muestra]"
-pytest                                               # 74 pruebas
+pytest                                               # 79 pruebas
 python -m fxbot.lab.run --muestra                    # prueba rápida con datos de ejemplo
 ```
 
@@ -105,6 +105,7 @@ fxbot/
   lab/                     backtest, costos, métricas, Monte Carlo, walk-forward con meseta, CLI multi-par
 scripts/descargar_datos_mt5.py   histórico desde MT5 (hora del servidor → UTC, sufijo automático)
 scripts/validar_windows.bat      todo el flujo de la Fase 1 con doble clic
+fxbot/portfolio/dca.py           calculadora de compra mensual de ETF hacia tus pesos objetivo
 tools/paridad/                   regenera la prueba de paridad con el código original de tu web
 ```
 

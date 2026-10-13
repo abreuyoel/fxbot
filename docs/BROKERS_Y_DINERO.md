@@ -31,6 +31,19 @@ Preguntas para el soporte de FP Markets antes de depositar:
 4. ¿Permiten trading automatizado vía cTrader Open API en la cuenta Raw?
 5. ¿Ofrecen VPS gratis, y con qué saldo o volumen?
 
+### Mensaje para el soporte de FP Markets (listo para pegar en su chat)
+
+> Hola. Soy residente en Venezuela, con pasaporte venezolano, y tengo cuentas MT5 y cTrader con
+> ustedes (entidad FP Markets SC). Antes de depositar quiero confirmar cinco cosas:
+> 1. ¿Puedo operar y RETIRAR fondos sin restricciones siendo residente en Venezuela?
+> 2. ¿Aceptan depósitos en USDT por la red TRC20 y transferencias desde Towerbank (Panamá)? ¿Qué comisión tiene cada uno?
+> 3. ¿Los retiros salen por el mismo método del depósito? ¿Hay monto mínimo de retiro o comisión?
+> 4. ¿Está permitido el trading automatizado mediante la cTrader Open API en una cuenta Raw?
+> 5. ¿Ofrecen VPS gratuito? ¿Con qué saldo o volumen mensual?
+> Gracias.
+
+Guarda las respuestas (captura o correo). Si la 1 o la 4 es "no", avísame antes de depositar.
+
 ### ¿Tengo que abrir una cuenta cTrader?
 
 **Ahora no.** Tu MT5 Raw (real) y tu MT5 demo bastan para la Fase 1 (descargar datos y
@@ -43,6 +56,15 @@ cTrader importa recién para el dinero real, por el costo del servidor:
 | Conexión desde Python | Solo Windows | Cualquier sistema (Open API) |
 | Servidor 24/5 | VPS Windows: ~$15–25/mes | VPS Linux: ~$5/mes |
 | Con $500 al 2 % mensual ($10) | El VPS se come toda la ganancia | Queda margen |
+
+**¿Hay que instalar el programa de cTrader?** No. El bot se conecta directo por la Open API, sin
+el programa. Para mirar tu cuenta basta el **WebTrader** (en el navegador) o la app del celular.
+Instala la versión de escritorio solo si te resulta más cómoda.
+
+Para la Fase 2 hará falta un paso único: registrar una "aplicación" en el portal de la Open API
+de cTrader (con tu cTrader ID) para obtener las credenciales del bot. Te guiaré cuando
+lleguemos ahí. **Nunca compartas tu contraseña**: el bot usa un permiso (token) que puedes
+revocar cuando quieras.
 
 Abrir una **demo de cTrader** es gratis y no compromete nada. Si quieres adelantarte, en
 *Add New Account* elige **Demo Account → cTrader → Account Type: Raw → USD → 1:30**. Así la
