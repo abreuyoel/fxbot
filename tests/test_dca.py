@@ -36,3 +36,11 @@ def test_cli(capsys):
     assert main(["--aporte", "50", "--objetivo", "SPYB=70", "SMH=30", "--precios", "SPYB=777,76", "SMH=310.5"]) == 0
     out = capsys.readouterr().out
     assert "SPYB" in out and "Total a invertir: 50.00" in out
+
+
+def test_modo_con_preguntas(monkeypatch, capsys):
+    answers = iter(["125", "", "777,76", "0", "583.39"])   # aporte, SPYB (Enter=0), precio, SMHB, precio
+    monkeypatch.setattr("builtins.input", lambda _q="": next(answers))
+    assert main([]) == 0
+    out = capsys.readouterr().out
+    assert "87.50$" in out and "37.50$" in out      # 70 % y 30 % de 125

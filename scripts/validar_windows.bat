@@ -29,8 +29,14 @@ python -m pip install --quiet --upgrade pip
 python -m pip install --quiet -e ".[mt5]" || goto :error
 
 echo.
+if exist datos\EURUSD_H1.csv if exist datos\GBPUSD_H1.csv if exist datos\USDJPY_H1.csv (
+  echo Ya tienes los datos descargados en la carpeta "datos". Para bajarlos de nuevo, borra esa carpeta.
+  goto :lab
+)
 echo Descargando historico desde MetaTrader 5 (puede tardar unos minutos)...
 python scripts\descargar_datos_mt5.py --simbolos EURUSD GBPUSD USDJPY --desde 2012-01-01 || goto :error
+
+:lab
 
 if not exist resultados mkdir resultados
 echo.

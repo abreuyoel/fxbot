@@ -74,3 +74,14 @@ def test_cli_varios_pares_junta_resultados(tmp_path, capsys):
     oos = pd.read_csv(out / "walkforward_operaciones.csv")
     assert set(oos["symbol"]) <= {"EURUSD", "GBPUSD"}
     assert summary["fuera_de_muestra"]["operaciones"] == len(oos)
+
+
+@pytest.mark.parametrize("module", ["fxbot.lab.run", "fxbot.portfolio.dca"])
+def test_la_ayuda_de_la_linea_de_comandos_no_falla(module, capsys):
+    # Python 3.14 valida los textos de ayuda al crear las opciones: un "%" sin escapar rompe el arranque
+    import importlib
+
+    with pytest.raises(SystemExit) as e:
+        importlib.import_module(module).main(["--help"])
+    assert e.value.code == 0
+    assert "usage" in capsys.readouterr().out

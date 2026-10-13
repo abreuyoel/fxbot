@@ -165,10 +165,10 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--simbolo", default=None, help="solo con un CSV cuyo nombre no indica el par")
     ap.add_argument("--tf", default="1h", help="temporalidad de trabajo: 1h, 4h, D")
     ap.add_argument("--capital", type=float, default=500.0)
-    ap.add_argument("--riesgo", type=float, default=1.0, help="% del capital por operación")
+    ap.add_argument("--riesgo", type=float, default=1.0, help="%% del capital por operación")
     ap.add_argument("--riesgo-tope", type=float, default=1.5,
-                    help="% máximo aceptado cuando solo cabe el lote mínimo (0 = descartar la señal)")
-    ap.add_argument("--dd-max", type=float, default=20.0, help="% de caída que apaga el bot")
+                    help="%% máximo aceptado cuando solo cabe el lote mínimo (0 = descartar la señal)")
+    ap.add_argument("--dd-max", type=float, default=20.0, help="%% de caída que apaga el bot")
     ap.add_argument("--apalancamiento", type=float, default=30.0,
                     help="apalancamiento de la cuenta (1:N). Solo limita el margen; el riesgo lo fija el stop")
     ap.add_argument("--comision", type=float, default=7.0, help="USD por lote ida y vuelta")

@@ -2,12 +2,12 @@
 
 **Resumen:** con $500–1000, la combinación que más sentido tiene es:
 
-- **Un núcleo pasivo de ETF:** ~70 % en el S&P 500 (SPYB en Binance) y ~30 % en tecnología
-  (VGT o SMH), con compra mensual fija. El bot no lo especula.
+- **Un núcleo pasivo de ETF en Binance:** 70 % SPYB (S&P 500) y 30 % SMHB (semiconductores),
+  con compra mensual fija. El bot no lo especula.
 - **Un satélite activo en forex** con el bot, en FP Markets (cTrader). Solo con dinero real
   después de aprobar la demo.
 
-Los futuros quedan fuera por ahora. Quantfury solo como respaldo si VGT o SMH no están en Binance.
+Los futuros quedan fuera por ahora. Todo el ETF va en Binance (SPYB + SMHB); Quantfury no hace falta.
 
 ## Comparación
 
@@ -57,14 +57,13 @@ tiene ~30 % en tecnología. Tener los tres es apostar triple a lo mismo.
 
 ### Calculadora de compra mensual
 
-Cada mes, pon tus tenencias y precios actuales (los copias de la app). La calculadora te dice
-cuánto comprar de cada uno para acercarte al reparto **sin vender nada**:
+En Windows: **doble clic en `scripts\compra_mensual.bat`**. Te pregunta:
+- cuánto vas a invertir;
+- cuántas unidades tienes de SPYB y SMHB (las ves en Binance → Activos);
+- los precios actuales.
 
-```bash
-python -m fxbot.portfolio.dca --aporte 50 --objetivo SPYB=70 SMH=30 --tenencias SPYB=0.05 SMH=0 --precios SPYB=777.76 SMH=310.5
-```
-
-No se conecta a ninguna cuenta ni compra nada: solo calcula.
+Te responde cuánto comprar de cada uno, en USDT, para mantener el 70/30 **sin vender nada**. No
+se conecta a tu cuenta ni compra por ti.
 
 ## Lo que averigüé de los bStocks de Binance
 
@@ -84,21 +83,12 @@ sobre los 5 puntos que te pedí revisar:
 - **SOXLB y KORUB**: son ETF **apalancados 3x**. Pierden valor con el tiempo cuando el mercado se mueve de lado. Sirven para especular días, no para tener años.
 - **SPYUSDT "Perp"** (en Futuros): es un contrato perpetuo con apalancamiento y comisión de financiamiento. No es comprar el ETF.
 
-### ¿Y VGT, SMH, VOO en Binance?
+### Qué hay en Binance (confirmado por ti)
 
-En tus capturas no aparecen, y no encontré confirmación de que existan como bStocks. Binance
-anunció dos ETF de semiconductores en su última tanda sin decir cuáles [5]. Búscalos en la app:
-**VGTB, SMHB, VOOB**.
-- **Si están:** todo en Binance, una sola plataforma.
-- **Si no están:** SPYB en Binance y la porción de tecnología (SMH o VGT) en Quantfury, que sí los
-  tiene en su lista de 80 ETF.
+- **SPYB** (S&P 500) y **SMHB** (semiconductores): **sí están**, en *TradFi → Spot → bStocks*.
+- **VGT y VOO: no están.** VOO da igual porque es lo mismo que SPYB. VGT se reemplaza por SMHB.
 
-## Quantfury: solo para lo que no haya en Binance
-
-Es solo una app móvil, sin API para bots, así que no sirve para el bot. Para el ETF sí puede
-servir, como respaldo, si VGT o SMH no están en Binance. Antes de usarla revisa:
-- Si las posiciones sin apalancamiento pagan algún costo por mantenerlas abiertas (las fuentes no coinciden [6]).
-- Si recibes los dividendos.
+**Decisión: todo en Binance, 70 % SPYB + 30 % SMHB.** Una sola plataforma, sin Quantfury.
 
 ## Plan por etapas
 

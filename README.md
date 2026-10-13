@@ -6,29 +6,28 @@ reutiliza los indicadores de [Caracas-Portafolio](https://github.com/abreuyoel/C
 > **Aviso.** Esto no es asesoría financiera. El trading con apalancamiento puede hacerte perder
 > todo el capital. El bot no opera con dinero real hasta que aprueba las fases 1 y 2.
 
-## Qué hacer ahora (paso a paso, en tu PC con Windows)
+## Qué hacer ahora: 3 tareas, en este orden
 
-Todo esto solo **lee precios**: no abre ninguna operación.
+**Tarea 1. Validar el bot (tu PC, 10–15 minutos).**
+Abre MetaTrader 5 en tu cuenta demo y haz doble clic en `scripts\validar_windows.bat`. Si ya
+bajaste los datos antes, no los vuelve a descargar. Al terminar, manda
+`resultados\resumen.json` y `resultados\reporte.txt`.
 
-1. **Instala Python** (3.12 o más nuevo) desde <https://www.python.org/downloads/>. Durante la
-   instalación, marca la casilla **"Add python.exe to PATH"**.
-2. **Descarga este repositorio:** en GitHub, botón verde **Code → Download ZIP**, y descomprímelo
-   (por ejemplo en `C:\fxbot`).
-3. **Abre MetaTrader 5** e inicia sesión en tu cuenta **demo** (`FPMarketsSC-Demo`). En MT5 ve a
-   *Herramientas → Opciones → Gráficos* y pon **"Máx. barras en el gráfico" = Unlimited**.
-   Reinicia MT5.
-4. **Doble clic en `scripts\validar_windows.bat`.** El script instala todo, descarga el
-   histórico de EURUSD, GBPUSD y USDJPY desde 2012 y corre el laboratorio completo. Tarda entre
-   5 y 15 minutos.
-5. **Mándame** `resultados\resumen.json` y `resultados\reporte.txt`.
+**Tarea 2. Primera compra de ETF (Binance, cuando la bolsa de EE. UU. esté abierta).**
+Doble clic en `scripts\compra_mensual.bat` y responde las preguntas. Compra en Binance lo que te
+diga. Si vas a meter $500 en 4 meses, el primer mes son $125: $87,50 de SPYB y $37,50 de SMHB.
 
-Si algo falla, el script se detiene y muestra el error: cópialo y mándalo.
+**Tarea 3. Mensaje a FP Markets (5 minutos).**
+Pega en su chat de soporte el mensaje de `docs/BROKERS_Y_DINERO.md` (sección 1) y guarda la
+respuesta. No deposites nada en FP Markets todavía.
+
+Todo lo demás (prompts, cTrader, VPS) es para más adelante y te aviso cuando toque.
 
 ## Qué hacer con cada documento
 
 | Documento | Para qué es | Qué haces tú con él |
 |---|---|---|
-| [`docs/MERCADOS.md`](docs/MERCADOS.md) | ETF (SPY, VOO, VGT, SMH) vs. forex vs. futuros, qué es un bStock y el plan de dinero por etapas | **Léelo primero.** Busca VGTB, SMHB y VOOB en Binance, elige el reparto y usa la calculadora mensual |
+| [`docs/MERCADOS.md`](docs/MERCADOS.md) | ETF (SPY, VOO, VGT, SMH) vs. forex vs. futuros, qué es un bStock y el plan de dinero por etapas | Léelo cuando quieras entender el porqué del 70 % SPYB + 30 % SMHB |
 | [`docs/BROKERS_Y_DINERO.md`](docs/BROKERS_Y_DINERO.md) | Broker, fondeo, cTrader, apalancamiento, VPS y costos | Pega en el chat de FP Markets el mensaje de la sección 1 y guarda las respuestas |
 | [`docs/PROMPT_MAESTRO.md`](docs/PROMPT_MAESTRO.md) | El encargo completo del sistema: fases, reglas de riesgo y criterios para avanzar | Nada por ahora. Cuando quieras avanzar una fase, pégaselo a Claude Code junto con "haz la Fase 2" |
 | [`docs/PROMPT_IA_TIEMPO_REAL.md`](docs/PROMPT_IA_TIEMPO_REAL.md) | Los prompts que usará la IA del bot: filtro de señales, resúmenes de Londres y NY, revisión semanal | Nada por ahora. Se programan en la Fase 2. Puedes leerlos para ajustar el tono o los horarios |
@@ -48,7 +47,7 @@ Si algo falla, el script se detiene y muestra el error: cópialo y mándalo.
 ```bash
 python -m venv .venv && source .venv/bin/activate     # Windows: .venv\Scripts\activate
 pip install -e ".[dev,muestra]"
-pytest                                               # 79 pruebas
+pytest                                               # 82 pruebas
 python -m fxbot.lab.run --muestra                    # prueba rápida con datos de ejemplo
 ```
 
@@ -106,6 +105,7 @@ fxbot/
 scripts/descargar_datos_mt5.py   histórico desde MT5 (hora del servidor → UTC, sufijo automático)
 scripts/validar_windows.bat      todo el flujo de la Fase 1 con doble clic
 fxbot/portfolio/dca.py           calculadora de compra mensual de ETF hacia tus pesos objetivo
+scripts/compra_mensual.bat       la calculadora con preguntas, con doble clic
 tools/paridad/                   regenera la prueba de paridad con el código original de tu web
 ```
 
