@@ -30,8 +30,8 @@ def signal_at(df, i, side, sl, tp, mult=1.0):
     return s
 
 
-def cfg(costs=NO_COSTS, capital=10_000.0, **lim):
-    return BacktestConfig("EURUSD", capital, costs, RiskLimits(**lim))
+def cfg(costs=NO_COSTS, capital=10_000.0, leverage=30.0, **lim):
+    return BacktestConfig("EURUSD", capital, costs, RiskLimits(**lim), leverage=leverage)
 
 
 def test_compra_que_llega_al_objetivo_gana_exactamente_lo_esperado():
@@ -107,7 +107,9 @@ def test_drawdown_maximo_apaga_el_bot():
         rows += [(1.1000, 1.1001, 1.0980, 1.0985), (1.1, 1.1, 1.1, 1.1)]
     df = bars(rows)
     s = pd.DataFrame({"signal": 1, "sl_dist": 0.0010, "tp_dist": 0.0050, "size_mult": 1.0}, index=df.index)
-    r = run_backtest(df, s, cfg(risk_pct=10.0, max_drawdown_pct=25.0, daily_loss_pct=100, weekly_loss_pct=100))
+    # 10 % de riesgo con stop de 10 pips = 10 lotes: hace falta apalancamiento alto para el margen
+    r = run_backtest(df, s, cfg(leverage=500, risk_pct=10.0, max_drawdown_pct=25.0, daily_loss_pct=100,
+                                weekly_loss_pct=100))
     assert r.halted_at is not None
     assert len(r.trades) == 3                # 10 % + 10 % + 10 % ≥ 25 % → apagado, no hay 4.ª
     assert r.equity.iloc[-1] == pytest.approx(10_000 * 0.9 ** 3)
@@ -139,3 +141,16 @@ def test_position_size_y_kelly():
     assert position_size(500, 1.0, 0.0060, 1.1, EURUSD) == 0.0
     assert kelly_from_trades(np.array([2.0, -1.0] * 10)) == pytest.approx(0.25)
     assert kelly_from_trades(np.array([1.0, 1.0])) == 0.0
+
+
+def test_apalancamiento_bajo_limita_el_tamano_por_margen():
+    df = bars([(1.1, 1.1, 1.1, 1.1), (1.1000, 1.1030, 1.0995, 1.1025)])
+    sig = signal_at(df, 0, 1, 0.0010, 0.0020)       # stop de 10 pips: el riesgo pide 0.05 lotes con $500
+    holgado = run_backtest(df, sig, BacktestConfig("EURUSD", 500.0, NO_COSTS, RiskLimits(), leverage=30))
+    assert holgado.trades.iloc[0].lots == pytest.approx(0.05)
+    # 1:5 → 1 lote de EURUSD a 1.10 retiene 22.000 USD de margen; con $500 caben 0.02 lotes
+    apretado = run_backtest(df, sig, BacktestConfig("EURUSD", 500.0, NO_COSTS, RiskLimits(), leverage=5))
+    assert apretado.trades.iloc[0].lots == pytest.approx(0.02) and apretado.reduced_margin == 1
+    # 1:1 → ni 0.01 lotes (1.100 USD de margen) caben en $500
+    sin = run_backtest(df, sig, BacktestConfig("EURUSD", 500.0, NO_COSTS, RiskLimits(), leverage=1))
+    assert sin.trades.empty and sin.skipped_margin == 1 and sin.skipped_small == 0

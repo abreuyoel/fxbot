@@ -31,6 +31,41 @@ Preguntas para el soporte de FP Markets antes de depositar:
 4. ¿Permiten trading automatizado vía cTrader Open API en la cuenta Raw?
 5. ¿Ofrecen VPS gratis, y con qué saldo o volumen?
 
+### ¿Tengo que abrir una cuenta cTrader?
+
+**Ahora no.** Tu MT5 Raw (real) y tu MT5 demo bastan para la Fase 1 (descargar datos y
+validar) y para la Fase 2 en demo, corriendo en tu PC.
+
+cTrader importa recién para el dinero real, por el costo del servidor:
+
+| | MT5 | cTrader |
+|---|---|---|
+| Conexión desde Python | Solo Windows | Cualquier sistema (Open API) |
+| Servidor 24/5 | VPS Windows: ~$15–25/mes | VPS Linux: ~$5/mes |
+| Con $500 al 2 % mensual ($10) | El VPS se come toda la ganancia | Queda margen |
+
+Abrir una **demo de cTrader** es gratis y no compromete nada. Si quieres adelantarte, en
+*Add New Account* elige **Demo Account → cTrader → Account Type: Raw → USD → 1:30**. Así la
+Fase 2 se puede programar directo contra cTrader. La cuenta cTrader real se abre recién en la
+Fase 3.
+
+### Apalancamiento: usa 1:30, no 1:5 ni 1:500
+
+El apalancamiento **no** define cuánto arriesgas: eso lo fija el stop (1 % por operación).
+Solo define cuánto margen retiene el broker. Con tu MT5 real en **1:5**:
+
+- 0,01 lotes de EURUSD retienen ~$217 de margen.
+- Con $500, como mucho cabe una posición de 0,02 lotes.
+- Las señales con stop corto (que piden más lotes) se achican o no entran.
+
+**1:30** (el máximo para minoristas en Europa en pares mayores) da margen de sobra para las
+reglas del bot y sigue siendo prudente. 1:500 no le da nada al bot y facilita un error manual
+grande. El laboratorio simula el margen (`--apalancamiento 30`) y el what-if muestra qué pasa
+con 1:5.
+
+Tu cuenta MT5 real tiene $50,10 y la de TradingView $1,50: déjalas quietas. El bot no usa ninguna
+cuenta real hasta la Fase 3.
+
 ## 2. Prop firms (cuentas fondeadas)
 
 FTMO, The5ers y FundedNext aparecen con **Venezuela restringida** en los listados que

@@ -41,6 +41,7 @@ def what_if(df: pd.DataFrame, sig: pd.DataFrame, cfg: BacktestConfig) -> pd.Data
         "cuenta estándar (sin comisión, spread ×6)": replace(cfg, costs=cfg.costs.scaled(
             commission_per_lot_rt=0.0, spread_mult=cfg.costs.spread_mult + 5)),
         "sin lote mínimo forzado": replace(cfg, limits=replace(cfg.limits, min_lot_max_risk_pct=0.0)),
+        "apalancamiento 1:5": replace(cfg, leverage=5.0),
         "riesgo 0.5 %": replace(cfg, limits=replace(cfg.limits, risk_pct=0.5)),
         "riesgo 2 %": replace(cfg, limits=replace(cfg.limits, risk_pct=2.0)),
     }
@@ -50,7 +51,7 @@ def what_if(df: pd.DataFrame, sig: pd.DataFrame, cfg: BacktestConfig) -> pd.Data
         m = compute_metrics(r.trades, r.equity, c.initial_capital)
         rows[name] = {k: m.get(k) for k in ("operaciones", "retorno_total_pct", "max_drawdown_pct",
                                             "profit_factor", "expectancy_r", "mensual_promedio_pct")}
-        rows[name]["descartadas"] = r.skipped_small
+        rows[name]["descartadas"] = r.skipped_small + r.skipped_margin
         rows[name]["apagado_por_dd"] = r.halted_at is not None
     return pd.DataFrame(rows).T
 
@@ -107,7 +108,7 @@ def run_symbol(symbol: str, raw: pd.DataFrame, a, verbose: bool) -> dict:
     df = to_timeframe(raw, a.tf)
     print(f"Temporalidad {a.tf}: {len(df)} velas")
 
-    cfg = BacktestConfig(symbol=symbol, initial_capital=a.capital,
+    cfg = BacktestConfig(symbol=symbol, initial_capital=a.capital, leverage=a.apalancamiento,
                          costs=CostModel(commission_per_lot_rt=a.comision),
                          limits=RiskLimits(risk_pct=a.riesgo, max_drawdown_pct=a.dd_max,
                                            min_lot_max_risk_pct=a.riesgo_tope))
@@ -125,6 +126,9 @@ def run_symbol(symbol: str, raw: pd.DataFrame, a, verbose: bool) -> dict:
               f"(tope {a.riesgo_tope} %): capital chico para estos stops")
     if res.skipped_small:
         print(f"  ⚠ {res.skipped_small} señales descartadas: ni el lote mínimo cabía en el tope de {a.riesgo_tope} %")
+    if res.skipped_margin or res.reduced_margin:
+        print(f"  ⚠ Apalancamiento 1:{a.apalancamiento:g}: {res.skipped_margin} señales sin margen y "
+              f"{res.reduced_margin} operaciones achicadas para caber en el margen")
     if res.skipped_limits:
         print(f"  {res.skipped_limits} señales bloqueadas por el stop diario/semanal")
     if res.halted_at is not None:
@@ -139,7 +143,7 @@ def run_symbol(symbol: str, raw: pd.DataFrame, a, verbose: bool) -> dict:
         print(what_if(df, sig, cfg).to_string())
 
     out = {"simbolo": symbol, "metricas": m, "forzadas_lote_minimo": forced,
-           "descartadas": res.skipped_small, "trades": res.trades.assign(symbol=symbol), "equity": res.equity}
+           "descartadas": res.skipped_small, "sin_margen": res.skipped_margin, "trades": res.trades.assign(symbol=symbol), "equity": res.equity}
     if a.walkforward:
         print("\n== Walk-forward (solo cuenta lo que pasa fuera de muestra) ==")
         wf = walk_forward(df, cfg, train=pd.DateOffset(months=a.wf_entreno_meses),
@@ -165,6 +169,8 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--riesgo-tope", type=float, default=1.5,
                     help="% máximo aceptado cuando solo cabe el lote mínimo (0 = descartar la señal)")
     ap.add_argument("--dd-max", type=float, default=20.0, help="% de caída que apaga el bot")
+    ap.add_argument("--apalancamiento", type=float, default=30.0,
+                    help="apalancamiento de la cuenta (1:N). Solo limita el margen; el riesgo lo fija el stop")
     ap.add_argument("--comision", type=float, default=7.0, help="USD por lote ida y vuelta")
     ap.add_argument("--walkforward", action="store_true", help="optimización walk-forward (tarda más)")
     ap.add_argument("--wf-entreno-meses", type=int, default=24)
@@ -231,7 +237,8 @@ def main(argv: list[str] | None = None) -> int:
         "parametros": {k: v for k, v in vars(a).items() if k != "csv"},
         "archivos": a.csv,
         "por_simbolo": {r["simbolo"]: {"metricas": r["metricas"], "forzadas_lote_minimo": r["forzadas_lote_minimo"],
-                                       "descartadas": r["descartadas"]} for r in results},
+                                       "descartadas": r["descartadas"], "sin_margen": r["sin_margen"]}
+                        for r in results},
         "fuera_de_muestra": {"operaciones": len(oos), "profit_factor_r": pf,
                              "expectancy_r": round(float(oos["r_multiple"].mean()), 3) if len(oos) else None},
         "montecarlo": mc.as_dict() if mc else None,

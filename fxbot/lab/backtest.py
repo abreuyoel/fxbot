@@ -28,6 +28,7 @@ class BacktestConfig:
     initial_capital: float = 500.0
     costs: CostModel = field(default_factory=CostModel)
     limits: RiskLimits = field(default_factory=RiskLimits)
+    leverage: float = 30.0                    # apalancamiento de la cuenta: limita el margen disponible
     entry_start: pd.Timestamp | None = None   # solo se abren operaciones dentro de esta ventana
     entry_end: pd.Timestamp | None = None
 
@@ -39,6 +40,8 @@ class BacktestResult:
     config: BacktestConfig
     skipped_small: int = 0     # señales descartadas porque ni 0.01 lotes cabía en el riesgo
     skipped_limits: int = 0    # señales bloqueadas por el stop diario/semanal
+    skipped_margin: int = 0    # señales sin margen suficiente (apalancamiento bajo)
+    reduced_margin: int = 0    # operaciones achicadas para caber en el margen
     halted_at: pd.Timestamp | None = None  # cuándo se apagó el bot por drawdown máximo
 
 
@@ -80,7 +83,7 @@ def run_backtest(df: pd.DataFrame, signals: pd.DataFrame, cfg: BacktestConfig) -
     pos: dict | None = None
     trades: list[dict] = []
     eq = np.full(len(df), np.nan)
-    skipped_small = skipped_limits = 0
+    skipped_small = skipped_limits = skipped_margin = reduced_margin = 0
     halted_at = None
 
     def close_pos(i: int, price: float, reason: str) -> None:
@@ -147,6 +150,13 @@ def run_backtest(df: pd.DataFrame, signals: pd.DataFrame, cfg: BacktestConfig) -
                 extra = c.commission_per_lot_rt + (spr[i] / inst.pip_size + 2 * c.slippage_pips) * pip_val
                 lots = position_size(cash, lim.risk_pct * smult[i - 1], sl_d[i - 1], entry, inst, extra,
                                      lim.min_lot_max_risk_pct * smult[i - 1])
+                max_lots_margin = inst.round_lots(cash / inst.margin_per_lot(entry, cfg.leverage))
+                if lots > max_lots_margin:
+                    if max_lots_margin >= inst.min_lot:
+                        lots, reduced_margin = max_lots_margin, reduced_margin + 1
+                    else:
+                        lots, skipped_margin = 0.0, skipped_margin + 1
+                        skipped_small -= 1  # se cuenta como falta de margen, no de capital
                 if lots == 0:
                     skipped_small += 1
                 else:
@@ -189,4 +199,6 @@ def run_backtest(df: pd.DataFrame, signals: pd.DataFrame, cfg: BacktestConfig) -
 
     equity = pd.Series(eq, index=idx, name="equity").iloc[start_i:]
     trades_df = pd.DataFrame(trades)
-    return BacktestResult(trades_df, equity.ffill(), cfg, skipped_small, skipped_limits, halted_at)
+    return BacktestResult(trades_df, equity.ffill(), cfg, skipped_small=skipped_small,
+                          skipped_limits=skipped_limits, skipped_margin=skipped_margin,
+                          reduced_margin=reduced_margin, halted_at=halted_at)

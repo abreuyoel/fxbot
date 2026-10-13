@@ -28,6 +28,11 @@ class Instrument:
             value /= price
         return value
 
+    def margin_per_lot(self, price: float, leverage: float) -> float:
+        """Margen en USD que el broker retiene por 1 lote: valor nominal ÷ apalancamiento."""
+        notional = self.contract_size if self.usd_is_base else self.contract_size * price
+        return notional / leverage
+
     def round_lots(self, lots: float) -> float:
         """Redondea HACIA ABAJO al paso del broker (nunca arriesgar más de lo calculado)."""
         steps = int(lots / self.lot_step + 1e-9)

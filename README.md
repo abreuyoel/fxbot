@@ -48,7 +48,7 @@ Si algo falla, el script se detiene y muestra el error: cópialo y mándalo.
 ```bash
 python -m venv .venv && source .venv/bin/activate     # Windows: .venv\Scripts\activate
 pip install -e ".[dev,muestra]"
-pytest                                               # 73 pruebas
+pytest                                               # 74 pruebas
 python -m fxbot.lab.run --muestra                    # prueba rápida con datos de ejemplo
 ```
 
@@ -67,6 +67,7 @@ Opciones:
 - `--riesgo 1`: % de riesgo por operación.
 - `--riesgo-tope 1.5`: % máximo aceptado cuando solo cabe el lote mínimo (`0` = descartar).
 - `--dd-max 20`: caída que apaga el bot.
+- `--apalancamiento 30`: apalancamiento de la cuenta; solo limita el margen (ver BROKERS_Y_DINERO.md).
 - `--comision 7`: USD por lote, ida y vuelta.
 - `--wf-entreno-meses 24 --wf-prueba-meses 6`: tamaño de las ventanas del walk-forward.
 
@@ -115,3 +116,4 @@ tools/paridad/                   regenera la prueba de paridad con el código or
 - Un gap más allá del stop sale a la apertura, que puede costar más de 1R.
 - El swap se cobra a las 17:00 de NY y cuenta triple los miércoles.
 - Con capital chico se usa el lote mínimo solo si arriesga ≤ `--riesgo-tope`; si no, la señal se descarta.
+- Se respeta el margen: con apalancamiento bajo, la operación se achica o no entra.
