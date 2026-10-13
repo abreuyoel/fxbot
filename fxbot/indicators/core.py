@@ -109,11 +109,9 @@ def stoch_d(df: pd.DataFrame, period: int = 14, smooth: int = 3) -> pd.Series:
 
 
 def dyn_rsi(close: pd.Series, base_period: int = 14) -> pd.Series:
-    """El "DMI" del panel Analytics de Caracas-Portafolio.
-
-    OJO: no es el DMI de Welles Wilder (eso es plus_di/minus_di en adx()). Es un RSI cuyo
-    período se adapta a la volatilidad de las últimas 5 velas: más volátil → período más corto.
-    """
+    """DMI de Chande (Dynamic Momentum Index): un RSI cuyo período se adapta a la volatilidad
+    de las últimas 5 velas. Caracas-Portafolio lo mostraba como "DMI" hasta que pasó a mostrar
+    el DMI de Wilder (+DI/−DI), que aquí está en adx()."""
     v = close.to_numpy(float)
     rsis = {p: _rsi_np(v, p) for p in range(5, 31)}
     out = np.full(len(v), 50.0)
@@ -302,24 +300,32 @@ def value_zone_label(z: float) -> str:
     return "HIST. MÍN."
 
 
-def kelly_half_returns(close: pd.Series, period: int = 60) -> pd.Series:
-    """Half-Kelly calculado sobre los retornos de las velas (como en Caracas-Portafolio).
+def kelly_half(close: pd.Series, period: int = 252, risk_free: float = 0.04) -> pd.Series:
+    """½ Kelly para MANTENER el activo (fórmula continua), como en Caracas-Portafolio.
 
-    Para el bot NO se usa esto para dimensionar: el Kelly correcto se calcula con los
-    resultados de las OPERACIONES de la estrategia (ver fxbot.risk.sizing.kelly_from_trades).
+    f* = (retorno anual esperado − tasa libre de riesgo) / varianza anual, con los retornos
+    diarios de las últimas `period` velas; se devuelve f*/2 limitado a [0, 1]. En la web se
+    calcula en USD. Para dimensionar operaciones del bot NO se usa esto: el Kelly de una
+    estrategia sale de sus operaciones (fxbot.risk.sizing.kelly_from_trades).
     """
     v = close.to_numpy(float)
 
     def f(w):
-        r = np.diff(w) / np.where(w[:-1] == 0, 1, w[:-1])
-        wins, losses = r[r > 0], r[r < 0]
-        if not len(wins) or not len(losses):
+        if len(w) < 61:
             return 0.0
-        p = len(wins) / len(r)
-        b = wins.mean() / abs(losses.mean())
-        return float(max(0.0, min(1.0, (p * b - (1 - p)) / b / 2)))
+        a, b = w[:-1], w[1:]
+        ok = (a > 0) & (b > 0)
+        a, b = a[ok], b[ok]
+        r = b / a - 1
+        r = r[np.abs(np.log(b / a)) <= 1.5]
+        if len(r) < 60:
+            return 0.0
+        var = r.var(ddof=1)
+        if not var > 0:
+            return 0.0
+        return float(max(0.0, min(1.0, (r.mean() * 252 - risk_free) / (var * 252) / 2)))
 
-    return _s(_trailing(v, period, f, 10), close, "kelly_half")
+    return _s(_trailing(v, period + 1, f, 1), close, "kelly_half")
 
 
 # ── volumen (baja confianza en forex) ───────────────────────────────────────
@@ -406,7 +412,7 @@ def all_indicators(df: pd.DataFrame) -> pd.DataFrame:
         rsi(df["close"]), macd(df["close"]), adx(df), aroon(df), atr(df), atr_pct(df),
         bbw(df["close"]), stoch_k(df), dyn_rsi(df["close"]), momentum(df["close"]),
         autocorr(df["close"]), price_percentile(df["close"]), value_zone_z(df["close"]),
-        kelly_half_returns(df["close"]), obv(df), ad_line(df), chaikin(df), mfi(df), cvd(df),
+        kelly_half(df["close"]), obv(df), ad_line(df), chaikin(df), mfi(df), cvd(df),
         liquidity_z(df),
     ], axis=1)
     return out

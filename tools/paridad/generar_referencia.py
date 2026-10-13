@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import ast
 import json
+import re
 import subprocess
 import sys
 import tempfile
@@ -25,7 +26,7 @@ HERE = Path(__file__).resolve().parent
 FIXTURE = HERE.parents[1] / "tests" / "fixtures" / "paridad_caracas.json"
 
 TS_METHODS = [
-    "obv", "accumulationDistribution", "adlSeriesArr", "aroon", "aroonAt", "adx", "chaikin", "emaOfArray",
+    "obv", "accumulationDistribution", "adlSeriesArr", "aroon", "aroonAt", "adx", "directional", "chaikin", "emaOfArray",
     "atrPercentile", "calcAdr", "calcBbw", "dmi", "stochastic", "mfi", "calcMarketRegime", "_rollingStd",
     "calcCvd", "calcPricePercentile", "calcValueZone", "calcKelly", "calcAutoCorr", "calcLiquidityZ",
     "calcMomentum", "calcRsi", "ema", "calcVolumeProfile",
@@ -49,6 +50,16 @@ def synthetic_candles(n: int = 320, seed: int = 7) -> list[dict]:
             price = c
         out.append({"time": f"t{i:04d}", "open": o, "high": h, "low": l, "close": c,
                     "volume": float(rng.integers(500, 5000))})
+    return out
+
+
+def kelly_candles(n: int = 300, seed: int = 25) -> list[dict]:
+    """Serie con deriva y volatilidad moderadas: el Kelly ½ cae entre 0 y 1 (no en los topes)."""
+    rng = np.random.default_rng(seed)
+    p, out = 100.0, []
+    for i in range(n):
+        p *= 1 + 0.0006 + rng.normal(0, 0.025)
+        out.append({"time": f"k{i:04d}", "open": p, "high": p, "low": p, "close": p, "volume": 1.0})
     return out
 
 
@@ -96,7 +107,9 @@ def extract_method(src: str, name: str) -> str:
 def run_ts(caracas: Path, candles: list[dict]) -> dict:
     src = (caracas / "frontend/src/app/graficos/graficos.component.ts").read_text()
     methods = "\n\n".join("  " + extract_method(src, m) for m in TS_METHODS)
+    rf = re.search(r"KELLY_RISK_FREE\s*=\s*([0-9.]+)", src)
     harness = f"""
+const KELLY_RISK_FREE = {rf.group(1) if rf else "0.04"};
 type Candle = {{ time: string; open: number; high: number; low: number; close: number; volume: number }};
 class Ref {{
 {methods}
@@ -113,7 +126,7 @@ for (const n of lengths) {{
   out[n] = {{
     obv: r.obv(d), ad_line: r.accumulationDistribution(d), chaikin: r.chaikin(d),
     aroon: r.aroon(d), adx: r.adx(d), atr_pct: r.atrPercentile(d), adr: r.calcAdr(d), bbw: r.calcBbw(d),
-    dyn_rsi: r.dmi(d), stoch: r.stochastic(d), mfi: r.mfi(d), regime: r.calcMarketRegime(d),
+    dmi: r.dmi(d), stoch: r.stochastic(d), mfi: r.mfi(d), regime: r.calcMarketRegime(d),
     cvd: r.calcCvd(d), pct252: r.calcPricePercentile(d), value_zone: r.calcValueZone(d),
     kelly: r.calcKelly(d), autocorr: r.calcAutoCorr(d, 30), liquidity_z: r.calcLiquidityZ(d),
     momentum: r.calcMomentum(d), rsi14: rsi.length ? rsi[rsi.length - 1].value : null,
@@ -122,13 +135,16 @@ for (const n of lengths) {{
   }};
 }}
 out.regimes = candles.map((_, i) => r.calcMarketRegime(candles.slice(0, i + 1)));
+const mid: Candle[] = JSON.parse(process.argv[4]);
+out.kelly_mid = [100, 200, 300].map(n => r.calcKelly(mid.slice(0, n)));
 console.log(JSON.stringify(out));
 """
     with tempfile.TemporaryDirectory() as tmp:
         f = Path(tmp) / "ref.ts"
         f.write_text(harness)
         res = subprocess.run(["node", "--experimental-strip-types", "--no-warnings", str(f),
-                              json.dumps(candles), json.dumps(LENGTHS)], capture_output=True, text=True)
+                              json.dumps(candles), json.dumps(LENGTHS), json.dumps(kelly_candles())],
+                             capture_output=True, text=True)
     if res.returncode:
         raise SystemExit(res.stderr)
     return json.loads(res.stdout)
@@ -152,7 +168,7 @@ def main() -> None:
     caracas = Path(sys.argv[1])
     candles = synthetic_candles()
     long_closes = [c["close"] for c in synthetic_candles(320, seed=11)]
-    data = {"candles": candles, "lengths": LENGTHS, "ts": run_ts(caracas, candles),
+    data = {"candles": candles, "lengths": LENGTHS, "ts": run_ts(caracas, candles), "kelly_candles": kelly_candles(),
             "vol_closes": long_closes, "vol_proxy": run_vol_proxy(caracas, long_closes)}
     FIXTURE.parent.mkdir(parents=True, exist_ok=True)
     FIXTURE.write_text(json.dumps(data, indent=1))

@@ -28,9 +28,9 @@ def series():
     return {
         "obv": ind.obv(DF), "ad_line": ind.ad_line(DF), "chaikin": ind.chaikin(DF), "aroon": ind.aroon(DF),
         "adx": ind.adx(DF)["adx"], "atr_pct": ind.atr_pct(DF), "adr": adr["adr_pct"], "adr_used": adr["adr_used_pct"],
-        "bbw": ind.bbw(c), "dyn_rsi": ind.dyn_rsi(c), "stoch": ind.stoch_k(DF), "mfi": ind.mfi(DF),
+        "bbw": ind.bbw(c), "dmi": ind.adx(DF)[["plus_di", "minus_di"]], "stoch": ind.stoch_k(DF), "mfi": ind.mfi(DF),
         "regime": market_regime(DF, calibration="bvc"), "cvd": ind.cvd(DF), "pct252": ind.price_percentile(c),
-        "value_z": ind.value_zone_z(c), "kelly": ind.kelly_half_returns(c), "autocorr": ind.autocorr(c),
+        "value_z": ind.value_zone_z(c), "kelly": ind.kelly_half(c), "autocorr": ind.autocorr(c),
         "liquidity_z": ind.liquidity_z(DF), "momentum": ind.momentum(c), "rsi14": ind.rsi(c), "ema20": ind.ema(c, 20),
     }
 
@@ -67,11 +67,13 @@ def test_tendencia(series, L):
         assert series["ema20"].iat[i] == pytest.approx(r["ema20"], abs=1e-8)
     if L >= 21:
         assert series["momentum"].iat[i] == pytest.approx(r["momentum"], abs=0.006)
-    assert series["dyn_rsi"].iat[i] == pytest.approx(r["dyn_rsi"], abs=0.006)
+    if L >= 15:   # DMI de Wilder: +DI / −DI
+        assert series["dmi"]["plus_di"].iat[i] == pytest.approx(r["dmi"]["plus"], rel=1e-9, abs=1e-9)
+        assert series["dmi"]["minus_di"].iat[i] == pytest.approx(r["dmi"]["minus"], rel=1e-9, abs=1e-9)
     assert series["regime"].iat[i] == r["regime"]
     if L >= 10:
         assert series["autocorr"].iat[i] == pytest.approx(r["autocorr"], abs=0.0006)
-        assert series["kelly"].iat[i] == pytest.approx(r["kelly"], abs=1e-9)
+    assert series["kelly"].iat[i] == pytest.approx(r["kelly"], abs=1e-9)
 
 
 @pytest.mark.parametrize("L", LENGTHS)
@@ -108,6 +110,15 @@ def test_regimen_en_todas_las_velas(series):
     expected = FIX["ts"]["regimes"]
     assert list(series["regime"]) == expected
     assert {"alcista", "bajista", "lateral", "volatil"} <= set(expected)  # el fixture cubre los 4 casos
+
+
+def test_kelly_medio_igual_a_la_web():
+    k = pd.DataFrame(FIX["kelly_candles"])["close"]
+    ours = ind.kelly_half(k)
+    expected = FIX["ts"]["kelly_mid"]
+    for n, e in zip((100, 200, 300), expected):
+        assert ours.iat[n - 1] == pytest.approx(e, abs=1e-9)
+    assert any(0 < e < 1 for e in expected)   # al menos un caso fuera de los topes 0 / 100 %
 
 
 def test_vix_proxy_igual_al_backend():

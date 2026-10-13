@@ -25,7 +25,7 @@ pytest tests/test_paridad_caracas.py
 | Chaikin Oscillator | `chaikin` | Baja confianza |
 | MFI | `mfi` | Baja confianza |
 | ADX | `adx()["adx"]` | Sí |
-| DMI | `dyn_rsi` | Ver hallazgo 2 |
+| DMI (+DI / −DI) | `adx()[["plus_di", "minus_di"]]` | Sí (DMI de Wilder) |
 | Aroon Up/Down | `aroon` | Sí |
 | Momentum (20D) | `momentum` | Sí |
 | Autocorr (30D) | `autocorr` | Sí, útil para elegir tendencia vs. reversión |
@@ -36,16 +36,22 @@ pytest tests/test_paridad_caracas.py
 | HVN / POC, LVN | `volume_profile` | Baja confianza |
 | Percentil 252D | `price_percentile` | Sí |
 | Value Zone (Z-score) | `value_zone_z` + `value_zone_label` | Sí, como contexto |
-| Kelly %F (60D) | `kelly_half_returns` | Ver hallazgo 3 |
+| Kelly ½ (1 año, USD) | `kelly_half` | Como referencia; el bot usa `kelly_from_trades` |
 | Z-Liquidez (20D) | `liquidity_z` | Baja confianza |
 | Régimen multi-TF | `regime.market_regime` | Sí, con calibración `fx` |
+| Régimen de volatilidad (HMM) | — (en el backend de la web: `/stocks/regime-hmm`) | Candidato a portar al bot si el laboratorio muestra que ayuda |
 | VIX proxy (IBC) | `regime.vol_proxy` | Sí, con bandas por percentil |
 
 ## Hallazgos al revisar tu código
 
-Las correcciones de nombres (1, 2 y 3) están en la rama `claude/kind-hawking-6l9i9m` de
-Caracas-Portafolio, lista para revisar y fusionar. Los cálculos no cambiaron, salvo el DMI
-del panel de IA, que ahora coincide con la tarjeta.
+Estado:
+- **Corrección de nombres:** fusionada en [Caracas-Portafolio#17](https://github.com/abreuyoel/Caracas-Portafolio/pull/17).
+- **Mejoras de fondo:** en [Caracas-Portafolio#18](https://github.com/abreuyoel/Caracas-Portafolio/pull/18).
+  - **Régimen:** HMM gaussiano de 3 estados entrenado sobre retornos en USD, con probabilidades filtradas.
+  - **DMI:** la tarjeta muestra el DMI de Wilder (+DI/−DI); se quita el de Chande.
+  - **Kelly:** ½ Kelly continuo con 252 sesiones, en USD.
+
+La prueba de paridad del bot ya sigue esas fórmulas nuevas.
 
 1. **El "HMM" no es un HMM.** `calcMarketRegime` dice "Gaussian HMM (4 states)", pero es una
    regla ponderada: la tendencia de 5, 20 y 60 velas con pesos 0,25/0,50/0,25, más un filtro de
